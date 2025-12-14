@@ -1441,26 +1441,25 @@ diff -ruN src_origin_with_susfs/fs/stat.c src_modified_with_susfs/fs/stat.c
  /**
   * generic_fillattr - Fill in the basic attributes from the inode struct
   * @idmap:		idmap of the mount the inode was found from
-@@ -152,12 +156,26 @@
+@@ -152,11 +156,25 @@
  				  STATX_ATTR_DAX);
  
- 	idmap = mnt_idmap(path->mnt);
+ 	mnt_userns = mnt_user_ns(path->mnt);
 +#ifdef CONFIG_HYMOFS
 +	if (inode->i_op->getattr) {
-+		int ret = inode->i_op->getattr(idmap, path, stat,
++		int ret = inode->i_op->getattr(mnt_userns, path, stat,
 +					    request_mask,
-+					    query_flags | AT_GETATTR_NOSEC);
++					    query_flags);
 +        if (ret == 0) hymofs_spoof_stat(path, stat);
 +        return ret;
 +    }
 +#else
  	if (inode->i_op->getattr)
- 		return inode->i_op->getattr(idmap, path, stat,
- 					    request_mask,
- 					    query_flags | AT_GETATTR_NOSEC);
+ 		return inode->i_op->getattr(mnt_userns, path, stat,
+ 					    request_mask, query_flags);
 +#endif
  
- 	generic_fillattr(idmap, request_mask, inode, stat);
+ 	generic_fillattr(mnt_userns, inode, stat);
 +#ifdef CONFIG_HYMOFS
 +	/* HymoFS: Spoof timestamps if needed */
 +	hymofs_spoof_stat(path, stat);
